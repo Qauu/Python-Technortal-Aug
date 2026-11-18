@@ -1,0 +1,231 @@
+import os
+import sqlite3
+DB_PATH=os.path.join(os.path.dirname(__file__),"library.db")
+def create_table():
+    conn=sqlite3.connect(DB_PATH)
+    try:
+        with conn:
+            conn.execute("""
+             CRETRE TABLE IF NOT EXISTS books(
+             id INTEGER PRIMARY KEY AUTOINCREMENT,
+             title TEXT NOT NULL,
+             author TEXT NOT NULL)
+            """)
+    except sqlite3.Error as e:
+        print("Database error :",e)
+    finally:
+        conn.close()
+def add_book(title,author):
+    conn=sqlite3.connect(DB_PATH)
+    try:
+        with conn:
+           conn.execute("INSERT INTO books (title,author) VALUES(?,?)",
+                        (title,author))
+           print(f"Book '{title}' add succcessfully!")
+    except sqlite3.Error as e:
+        print("DataBase Error",e)
+    finally:
+        conn.close()
+def add_book_batch(books):
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        with conn:
+            conn.executemany("INSERT INTO books (title, author) VALUES (?, ?)", books)
+        print(f"{len(books)} books added successfully.")
+    except sqlite3.Error as e:
+        print("Database error:", e)
+    finally:
+        conn.close()
+def view_all_books():
+    conn=sqlite3.connect(DB_PATH)
+    try:
+        cur=conn.execute("SELECT id, title , author FROM books")
+        rows=cur.fetchall()
+        if not rows:
+            print("No Book found.")
+            return
+        else:
+            for row in rows:
+                print(f"ID :{row[0]},TITLE :{row[1]},AUTHOR :{row[2]}")
+    except sqlite3.Error as e:
+        print("Database error:", e)
+    finally:
+        conn.close()
+def view_books_by_id(book_id):
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cur = conn.execute(
+            "SELECT id, title, author FROM books WHERE id = ?", (book_id,)
+        )
+        row = cur.fetchone()
+
+        if not row:
+            print(f"No book found with ID {book_id}.")
+            return
+
+        print(f"ID: {row[0]}, Title: {row[1]}, Author: {row[2]}")
+    except sqlite3.Error as e:
+        print("Database error:", e)
+    finally:
+        conn.close()
+
+def search_books_by_author(author):
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cur = conn.execute(
+            "SELECT id, title, author FROM books WHERE author = ?", (author,)
+        )
+        rows = cur.fetchall()
+
+        if not rows:
+            print(f"No books found by author '{author}'.")
+            return
+
+        print(f"\n--- Books by Author: {author} ---")
+        for row in rows:
+            print(f"ID: {row[0]}, Title: {row[1]}, Author: {row[2]}")
+    except sqlite3.Error as e:
+        print("Database error:", e)
+    finally:
+        conn.close()
+def update_book_title(book_id, new_title):
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        with conn:
+            cur = conn.execute(
+                "UPDATE books SET title = ? WHERE id = ?", (new_title, book_id)
+            )
+            if cur.rowcount == 0:
+                print(f"No book found with ID {book_id}.")
+            else:
+                print(f"Book ID {book_id} title updated to '{new_title}'.")
+    except sqlite3.Error as e:
+        print("Database error:", e)
+    finally:
+        conn.close()
+
+
+def delete_book(book_id):
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        with conn:
+            cur = conn.execute("DELETE FROM books WHERE id = ?", (book_id,))
+            if cur.rowcount == 0:
+                print(f"No book found with ID {book_id}.")
+            else:
+                print(f"Book ID {book_id} deleted successfully.")
+    except sqlite3.Error as e:
+        print("Database error:", e)
+    finally:
+        conn.close()
+
+
+def main():
+    create_table()
+
+    while True:
+        print("\n=== Library Management System ===")
+        print("1. View All Books")
+        print("2. Add New Book")
+        print("3. View Book by ID")
+        print("4. Search Books by Author")
+        print("5. Update Book Title")
+        print("6. Delete Book")
+        print("7. Add Multiple Books")
+        print("0. Exit")
+
+        choice = input("Enter your choice (0-7): ").strip()
+        if choice=="1":
+            view_all_books()
+        elif choice=="2":
+            title=input("Enter title :").strip()
+            if not title:
+                print("No title found.")
+                continue
+            author=input("Enter author:").strip()
+            if not author:
+                print("No author found.")
+                continue
+            add_book(title,author)
+        elif choice == "3":
+            id_input = input("Enter book ID: ").strip()
+            try:
+                book_id = int(id_input)
+            except ValueError:
+                print("Invalid ID. Please enter numbers only.")
+                continue
+
+            view_books_by_id(book_id)
+
+        elif choice == "4":
+            author = input("Enter author name to search: ").strip()
+            search_books_by_author(author)
+
+        elif choice == "5":
+            id_input = input("Enter book ID to update: ").strip()
+            try:
+                book_id = int(id_input)
+            except ValueError:
+                print("Invalid ID. Please enter numbers only.")
+                continue
+
+            new_title = input("Enter new title: ").strip()
+            if not new_title:
+                print("Title cannot be empty.")
+                continue
+
+            update_book_title(book_id, new_title)
+
+        elif choice == "6":
+            id_input = input("Enter book ID to delete: ").strip()
+            try:
+                book_id = int(id_input)
+            except ValueError:
+                print("Invalid ID. Please enter numbers only.")
+                continue
+
+            delete_book(book_id)
+
+        elif choice == "7":
+            num_books_input = input("Enter number of books to add: ").strip()
+            try:
+                num_books = int(num_books_input)
+                if num_books <= 0:
+                    print("Number of books must be greater than zero.")
+                    continue
+            except ValueError:
+                print("Invalid number. Please enter a positive integer.")
+                continue
+            books_to_add = []
+            for i in range(num_books):
+                print(f"\nEntering details for book {i + 1}:")
+                title = input("Enter book title: ").strip()
+                if not title:
+                    print("Title cannot be empty. Skipping this book.")
+                    continue
+
+                author = input("Enter author name: ").strip()
+                if not author:
+                    print("Author cannot be empty. Skipping this book.")
+                    continue
+
+                books_to_add.append((title, author))
+
+            if books_to_add:
+                add_book_batch(books_to_add)
+            else:
+                print("No valid books to add.")
+        elif choice == "0":
+            print("Exiting application. Goodbye!")
+            break
+
+        else:
+            print("Invalid selection. Please choose an option from 0 to 6.")
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+
